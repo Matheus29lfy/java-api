@@ -5,7 +5,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,19 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -DskipTests
 
-    - name: Docker Build
-      run: docker build -t crud-api .
+    - name: Prepare SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
 
-    # Adicionar push para DockerHub ou deploy em AWS (próxima etapa)
+    - name: Copy app to EC2
+      run: |
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
+
+    - name: Restart app on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@3.148.243.147 << 'EOF'
+          pkill -f 'java -jar' || true
+          nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
+        EOF
