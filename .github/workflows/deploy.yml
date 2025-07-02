@@ -38,3 +38,9 @@ jobs:
           pkill -f 'java -jar' || true
           nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
         EOF
+  
+    - name: Deploy JAR to EC2
+      run: rsync -avz -e "ssh -i ~/.ssh/id_rsa" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
+
+    - name: Run app remotely
+      run: ssh -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &"
