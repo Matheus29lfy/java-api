@@ -21,14 +21,7 @@ jobs:
     - name: Build with Maven
       run: mvn clean package -DskipTests
 
-    # - name: Prepare SSH Key
-    #   run: |
-    #     mkdir -p ~/.ssh
-    #     echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-    #     chmod 600 ~/.ssh/id_rsa
-    #     ssh-keyscan -H 3.148.243.147 >> ~/.ssh/known_hosts
-
-    - name: Configurar chave SSH
+    - name: Configurar ambiente SSH
       shell: bash
       env:
         EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -38,21 +31,22 @@ jobs:
         echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H 3.148.243.147 >> ~/.ssh/known_hosts
+        # Verificação de debug
         ls -la ~/.ssh
+        head -n 1 ~/.ssh/id_rsa
 
-    - name: Copy app to EC2
+    - name: Testar conexão SSH
       run: |
-        rsync -avz -e "ssh -o StrictHostKeyChecking=no" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "echo Conexão SSH bem-sucedida!"
+
+    - name: Deploy JAR to EC2
+      run: |
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
 
     - name: Restart app on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no ubuntu@3.148.243.147 << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 << 'EOF'
           pkill -f 'java -jar' || true
           nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
+          echo "Aplicação reiniciada com sucesso!"
         EOF
-  
-    - name: Deploy JAR to EC2
-      run: rsync -avz -e "ssh -i ~/.ssh/id_rsa" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
-
-    - name: Run app remotely
-      run: ssh -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &"
