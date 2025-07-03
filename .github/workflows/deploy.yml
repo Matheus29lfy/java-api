@@ -35,6 +35,13 @@ jobs:
         ls -la ~/.ssh
         head -n 1 ~/.ssh/id_rsa
 
+    - name: Debug SSH
+      run: |
+        echo "Conteúdo da chave:"
+        cat ~/.ssh/id_rsa
+        echo "Tentando conexão detalhada:"
+        ssh -vvv -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147
+        
     - name: Testar conexão SSH
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "echo Conexão SSH bem-sucedida!"
