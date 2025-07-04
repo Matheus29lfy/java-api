@@ -18,33 +18,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Build with Maven
+    - name: Build com Maven
       run: mvn clean package -DskipTests
 
-    - name: Configurar ambiente SSH
-      shell: bash
-      env:
-        EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+    - name: Preparar chave SSH
       run: |
         mkdir -p ~/.ssh
-        umask 077
-        echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H 3.148.243.147 >> ~/.ssh/known_hosts
 
-    - name: Testar conexão SSH
+    - name: Enviar arquivos ao EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "echo ✅ Conexão SSH bem-sucedida!"
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" \
+          target/*.jar Dockerfile docker-compose.yml \
+          ubuntu@3.148.243.147:/home/ubuntu/
 
-    - name: Deploy JAR to EC2
-      run: |
-        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa" target/*.jar ubuntu@3.148.243.147:/home/ubuntu/app.jar
-
-    - name: Restart app on EC2
+    - name: Subir container via docker-compose
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 << 'EOF'
-          echo "🔁 Reiniciando aplicação..."
-          pkill -f 'java -jar' || true
-          nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
-          echo "✅ Aplicação reiniciada com sucesso!"
+          cd /home/ubuntu
+          docker-compose down || true
+          docker-compose up --build -d
+          echo "Aplicação atualizada e em execução!"
         EOF
