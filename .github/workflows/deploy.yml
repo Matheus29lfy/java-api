@@ -31,20 +31,10 @@ jobs:
         echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H 3.148.243.147 >> ~/.ssh/known_hosts
-        # Verificação de debug
-        ls -la ~/.ssh
-        head -n 1 ~/.ssh/id_rsa
 
-    - name: Debug SSH
-      run: |
-        echo "Conteúdo da chave:"
-        cat ~/.ssh/id_rsa
-        echo "Tentando conexão detalhada:"
-        ssh -vvv -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147
-        
     - name: Testar conexão SSH
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "echo Conexão SSH bem-sucedida!"
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 "echo ✅ Conexão SSH bem-sucedida!"
 
     - name: Deploy JAR to EC2
       run: |
@@ -53,7 +43,8 @@ jobs:
     - name: Restart app on EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@3.148.243.147 << 'EOF'
+          echo "🔁 Reiniciando aplicação..."
           pkill -f 'java -jar' || true
           nohup java -jar /home/ubuntu/app.jar > /home/ubuntu/app.log 2>&1 &
-          echo "Aplicação reiniciada com sucesso!"
+          echo "✅ Aplicação reiniciada com sucesso!"
         EOF
